@@ -1,0 +1,89 @@
+﻿@page "/movie/edit/{id}"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<style>
+    label {
+        margin-top: 0.5em;
+    }
+
+    .myDiv {
+        display: flex;
+        justify-content: space-between;
+        width: 60%;
+        margin-bottom: 1em;
+    }
+</style>
+
+@if (movie == null)
+{
+    <p>Loading ...</p>
+}
+else
+{
+    <h3>"@movie.Title" bearbeiten</h3>
+    <EditForm Model="@movie" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="myDiv">
+            <label for="title">Filmtitel: </label>
+            <InputText id="title" @bind-Value="movie.Title" />
+        </div>
+        <div class="myDiv">
+            <label for="tickets">Verkaufte Kinoeintritte: </label>
+            <InputNumber id="tickets" @bind-Value="movie.TicketsSold" />
+        </div>
+        <div class="myDiv">
+            <label for="year">Erscheinungsjahr: </label>
+            <InputNumber id="year" @bind-Value="movie.ProductionYear" />
+        </div>
+        <div class="myDiv">
+            <label for="genre">Filmgenre: </label>
+            <InputSelect id="genre" @bind-Value="movieGenre">
+                @if (genres == null)
+                {
+                    <option value="-1">None</option>
+                } else {
+                    @foreach (var genre in genres)
+                    {
+                        <option value="@genre.Id">@genre.Designation</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+        <button type="submit" class="btn btn-primary">Bestätigen</button>
+        <button type="button" class="btn btn-danger" onclick="@(() => DeleteMovie(movie.Id))">Löschen</button>
+
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private const string ServiceEndpoint = "/api";
+    private Movie movie;
+    private List<Genre> genres;
+    private List<Director> directors;
+    private int movieGenre;
+
+    protected override async Task OnInitializedAsync() => await GetServerData(id);
+    private async Task GetServerData(string id)
+    {
+        movie = await Http.GetFromJsonAsync<Movie>($"{ServiceEndpoint}/Movie/{id}");
+        genres = await Http.GetFromJsonAsync<List<Genre>>($"{ServiceEndpoint}/Genre");
+        movieGenre = movie.MovieGenre.Id;
+    }
+
+    private async void HandleValidSubmit()
+    {
+        movie.MovieGenre = genres.FirstOrDefault(g => g.Id == movieGenre);
+        await Http.PutAsJsonAsync($"{ServiceEndpoint}/Movie/{id}", movie);
+        NavigationManager.NavigateTo($"/");
+    }
+
+    private async Task DeleteMovie(int id)
+    {
+        await Http.DeleteAsync($"{ServiceEndpoint}/Movie/{id}");
+        NavigationManager.NavigateTo($"/");
+    }
+}

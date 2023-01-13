@@ -1,0 +1,65 @@
+﻿@page "/director/edit/{id}"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<style>
+    label {
+        margin-top: 0.5em;
+    }
+
+    .myDiv {
+        display: flex;
+        justify-content: space-between;
+        width: 60%;
+        margin-bottom: 1em;
+    }
+</style>
+
+@if (director == null)
+{
+    <p>Loading ...</p>
+}
+else
+{
+    <h3>"@director.FirstName @director.LastName" bearbeiten</h3>
+    <EditForm Model="@director" OnValidSubmit="@HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="myDiv">
+            <label for="firstname">Vorname: </label>
+            <InputText id="firstname" @bind-Value="director.FirstName" />
+        </div>
+        <div class="myDiv">
+            <label for="lastname">Nachname: </label>
+            <InputText id="lastname" @bind-Value="director.LastName" />
+        </div>
+        <button type="submit" class="btn btn-primary">Bestätigen</button>
+        <button type="button" class="btn btn-danger" onclick="@(() => DeleteDirector(director.Id))">Löschen</button>
+
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public string id { get; set; }
+    private const string ServiceEndpoint = "/api";
+    private Director director;
+
+    protected override async Task OnInitializedAsync() => await GetServerData(id);
+    private async Task GetServerData(string id)
+    {
+        director = await Http.GetFromJsonAsync<Director>($"{ServiceEndpoint}/Director/{id}");
+    }
+
+    private async void HandleValidSubmit()
+    {
+        await Http.PutAsJsonAsync($"{ServiceEndpoint}/Director/{id}", director);
+        NavigationManager.NavigateTo($"/Director");
+    }
+
+    private async Task DeleteDirector(int id)
+    {
+        await Http.DeleteAsync($"{ServiceEndpoint}/Director/{id}");
+        NavigationManager.NavigateTo($"/Director");
+    }
+}

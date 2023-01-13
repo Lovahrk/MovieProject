@@ -1,0 +1,50 @@
+﻿@page "/Director/add"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<style>
+    label {
+        margin-top: 0.25em;
+    }
+
+    .myDiv {
+        display: flex;
+        justify-content: space-between;
+        width: 60%;
+        margin-bottom: 1em;
+    }
+</style>
+
+<h3>Regisseur hinzufügen</h3>
+<EditForm Model="@director" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="myDiv">
+        <label for="firstname">Vorname: </label>
+        <InputText placeholder="Max" id="firstname" @bind-Value="director.FirstName" />
+    </div>
+
+    <div class="myDiv">
+        <label for="lastname">Nachname: </label>
+        <InputText placeholder="Muster" id="lastname" @bind-Value="director.LastName" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+    <button class="btn btn-danger" onclick="@(() => CancelDirector())">Abbrechen</button>
+
+</EditForm>
+@code {
+    private DirectorDTO director = new DirectorDTO();
+    private const string ServiceEndpoint = "/api";
+
+    private async void HandleValidSubmit()
+    {
+        await Http.PostAsJsonAsync($"{ServiceEndpoint}/Director", director);
+        NavigationManager.NavigateTo($"/Director");
+    }
+
+    private async Task CancelDirector()
+    {
+        NavigationManager.NavigateTo($"/Director");
+    }
+}

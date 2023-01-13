@@ -1,0 +1,166 @@
+﻿@page "/Director"
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+<style>
+    .myCollapse {
+        width: 100%;
+        text-align: left;
+        border: none;
+        border-bottom: solid 1px lightgrey;
+        background-color: #F0F0F0;
+        margin-bottom: 0.5em;
+        padding: 0.5em 0 0.5em 1em;
+    }
+
+    .myCollapsing {
+        margin-left: 1em;
+    }
+
+    .myCollapsing p {
+        margin-bottom: 0.5em;
+    }
+
+    .navigationButton {
+        border: none;
+        margin: 1em;
+        width: 3em;
+        height: 1.5em;
+    }
+
+    .navigation {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+</style>
+
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
+    <h1>Regisseure</h1>
+    <div>
+        <label for="results">Regisseure pro Seite: </label>
+        <select name="results" id="results" style="display:inline" @onchange="ResetPage">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">Alle</option>
+        </select>
+    </div>
+</div>
+
+@if (directors == null)
+{
+    <p>Loading ...</p>
+}
+else
+{
+    k = 0;
+    @foreach (var director in directors)
+    {
+        @if (k >= show * (page - 1) && k < show * page)
+        {
+            <div>
+                <button class="myCollapse" @onclick="@(() => ToggleField(director.Id))">@director.FirstName @director.LastName</button>
+            </div>
+            @if (director.Id == currentCollapse)
+            {
+                <div class="myCollapsing">
+                    <p>Vorname: @director.FirstName</p>
+                    <p>Nachname: @director.LastName</p>
+                    <p>Filme: </p>
+                    <ul>
+                        @foreach (var mov in director.Movies)
+                        {
+                            <li>@mov.Title</li>
+                        }
+                    </ul>
+                    <button class="btn btn-primary" style="margin-bottom: 1em" @onclick="(() => NavigateToEditMovie(director))">Bearbeiten</button>
+                </div>
+            }
+        }
+        k++;
+    }
+
+    <div class="navigation">
+        @if (page > 1)
+        {
+            <button class="navigationButton" @onclick="GoBack">&#60;</button>
+        }
+        else
+        {
+            <p class="navigationButton"></p>
+        }
+
+        @if (1 != directors.Length / show)
+        {
+            <p style="margin-top: 1em;">@(page)</p>
+        }
+        else
+        {
+            <p></p>
+        }
+
+        @if (page < directors.Length / show)
+        {
+            <button class="navigationButton" @onclick="GoForth">&#62;</button>
+        }
+        else
+        {
+            <p class="navigationButton"></p>
+        }
+    </div>
+}
+
+
+@code {
+    private const string ServiceEndpoint = "/api/Director";
+    private Director[] directors;
+    private long currentCollapse = -1;
+
+    int show = 10;
+    int page = 1;
+    int k = 0;
+
+    protected override async Task OnInitializedAsync() => await GetDirectors();
+
+    private async Task GetDirectors()
+    {
+        directors = await Http.GetFromJsonAsync<Director[]>(ServiceEndpoint);
+        directors = directors.OrderBy(director => director.FirstName).ToArray();
+    }
+
+    private void ResetPage(ChangeEventArgs e)
+    {
+        show = int.Parse(e.Value.ToString());
+        page = 1;
+    }
+
+    private void ToggleField(long id)
+    {
+        if (currentCollapse == id)
+        {
+            currentCollapse = -1;
+        }
+        else
+        {
+            currentCollapse = id;
+        }
+    }
+
+    private void GoBack()
+    {
+        page--;
+    }
+
+    private void GoForth()
+    {
+        page++;
+    }
+
+    private void NavigateToEditMovie(Director director)
+    {
+        NavigationManager.NavigateTo($"/Director/edit/{director.Id}");
+    }
+}

@@ -1,0 +1,178 @@
+﻿@page "/movie/add"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<style>
+    label {
+        margin-top: 0.5em;
+    }
+
+    .myDiv {
+        display: flex;
+        justify-content: space-between;
+        width: 60%;
+        margin-bottom: 1em;
+    }
+</style>
+
+<h3>Film registrieren</h3>
+
+<EditForm Model="@movie" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="myDiv">
+        <label for="title">Filmtitel: </label>
+        <InputText id="title" @bind-Value="movie.Title" />
+    </div>
+    <div class="myDiv">
+        <label for="tickets">Verkaufte Kinoeintritte: </label>
+        <InputNumber id="tickets" @bind-Value="movie.TicketsSold" />
+    </div>
+    <div class="myDiv">
+        <label for="year">Erscheinungsjahr: </label>
+        <InputNumber id="year" @bind-Value="movie.ProductionYear" />
+    </div>
+    <div class="myDiv">
+        <label for="genre">Filmgenre: </label>
+        <InputSelect id="genre" @bind-Value="movieGenre">
+            @if (genres == null)
+            {
+                <option value="-1">None</option>
+            }
+            else
+            {
+                @foreach (var genre in genres)
+                {
+                    <option value="@genre.Id">@genre.Designation</option>
+                }
+            }
+        </InputSelect>
+    </div>
+    <div class="myDiv">
+        <label for="director">Regisseure: </label>
+        <InputText placeholder="Suche" id="director" @bind-Value="emptyString" @onkeypress="@UpdateSearch" @onkeyup="@IsDelete"></InputText>
+    </div>
+    @if (searchDirectors != null)
+    {
+        int searchResults = 0;
+        @foreach (var director in searchDirectors)
+        {
+            <div class="myDiv">
+                @if (!movie.Directors.Any(dir => dir.Id == director.Id)) {
+                    <button class="btn btn-success" type="button" onclick="@(() => AddDirector(director.Id.ToString()))">Hinzufügen: </button>
+                } else
+                {
+                    <p style="color: lightgrey">Hinzugefügt</p>
+                }
+                <div class="searchBox">
+                    <p>@director.FirstName @director.LastName</p>
+                </div>
+            </div>
+            @if (searchResults < 9)
+            {
+                searchResults++;
+            } else
+            {
+                break;
+            }
+        }
+    }
+    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+    <button class="btn btn-danger" onclick="@(() => CancelMovie())">Abbrechen</button>
+
+</EditForm>
+
+@code {
+    private MovieDTO movie = new MovieDTO();
+    private const string ServiceEndpoint = "/api";
+    private List<Genre> genres;
+    private List<Director> directors;
+    private Genre movieGenre;
+    private string searchString;
+    private List<Director> searchDirectors = new List<Director>();
+    private string fullName;
+    private string emptyString;
+    private int maxResults = 10;
+    private int currentResult = 1;
+    private DirectorDTO newDir;
+
+    protected override async Task OnInitializedAsync() => await GetServerData();
+    private async Task GetServerData()
+    {
+        genres = await Http.GetFromJsonAsync<List<Genre>>($"{ServiceEndpoint}/Genre");
+        directors = await Http.GetFromJsonAsync<List<Director>>($"{ServiceEndpoint}/Director");
+        movieGenre = await Http.GetFromJsonAsync<Genre>($"{ServiceEndpoint}/Genre/101");
+    }
+
+
+    private async void HandleValidSubmit()
+    {
+        movie.MovieGenre = movieGenre;
+        await Http.PostAsJsonAsync($"{ServiceEndpoint}/Movie", movie);
+        NavigationManager.NavigateTo($"/");
+    }
+
+    private async Task CancelMovie()
+    {
+        NavigationManager.NavigateTo($"/");
+    }
+
+    private void UpdateSearch(KeyboardEventArgs e)
+    {
+        searchDirectors.Clear();
+        searchString += e.Key;
+        emptyString = searchString.Substring(0, searchString.Length - 1);
+
+        if (directors != null)
+        {
+            foreach (var potentialDir in directors)
+            {
+                fullName = potentialDir.FirstName + " " + potentialDir.LastName;
+                if (fullName.Contains(searchString))
+                {
+                    if (searchDirectors == null)
+                    {
+                        searchDirectors.Add(potentialDir);
+                    } else {
+                        if (!searchDirectors.Contains(potentialDir))
+                        {
+                            searchDirectors.Add(potentialDir);
+                        }
+                    }
+                }
+            }
+        }
+        if (searchDirectors != null) { 
+            searchDirectors = searchDirectors.OrderBy(dir => dir.FirstName).ToList();
+        }
+    }
+
+    private async Task AddDirector(string id)
+    {
+        newDir = await Http.GetFromJsonAsync<DirectorDTO>($"{ServiceEndpoint}/Director/{id}");
+        newDir.Movies.Clear();
+        if (movie.Directors == null)
+        {
+            movie.Directors.Add(newDir);
+        } else
+        {
+            if (!movie.Directors.Contains(newDir))
+            {
+                movie.Directors.Add(newDir);
+            }
+        }
+        searchString = "";
+        emptyString = "";
+        searchDirectors.Clear();
+    }
+
+    private void IsDelete(KeyboardEventArgs e)
+    {
+        if (e.Key == "Backspace")
+        {
+            searchString = "";
+            emptyString = "";
+            searchDirectors.Clear();
+        }
+    }
+}

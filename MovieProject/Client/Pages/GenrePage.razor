@@ -1,0 +1,78 @@
+﻿@page "/Genre"
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+<style>
+    .myDiv {
+        display: flex;
+        justify-content: space-between;
+        width: 60%;
+        margin-bottom: 1em;
+    }
+</style>
+
+<h3>Genre Übersicht</h3>
+
+@if (genres == null)
+{
+    <p>Loading ...</p>
+} else
+{
+    <EditForm Model="@genres" OnValidSubmit="@HandleValidSubmit">
+        @foreach (var genre in genres)
+        {
+            <div class="myDiv">
+                <InputText id="designation" @bind-Value="genre.Designation" />
+                <div>
+                    <button type="button" class="btn btn-primary" @onclick="@(() => SaveGenre(genre))">Speichern</button>
+                    <button type="button" class="btn btn-danger" @onclick="@(() => DeleteGenre(genre))">Löschen</button>
+                </div>
+            </div>
+        }
+        <div class="myDiv">
+            <InputText id="newGenre" @bind-Value="newDesignation" placeholder="Genre Name" />
+            <button type="button" class="btn btn-success" @onclick="NewGenre">Neues Genre</button>
+        </div>
+    </EditForm>
+}
+
+@code {
+    private const string ServiceEndpoint = "/api";
+    private List<Genre> genres;
+    private string newDesignation;
+    private Genre newGenre = new Genre();
+
+    protected override async Task OnInitializedAsync() => await GetGenres();
+
+    private async Task GetGenres()
+    {
+        genres = await Http.GetFromJsonAsync<List<Genre>>($"{ServiceEndpoint}/Genre");
+    }
+
+    private void HandleValidSubmit()
+    {
+        Console.WriteLine("Yay");
+    }
+
+    private async Task NewGenre()
+    {
+        newGenre.Designation = newDesignation;
+        newDesignation = "";
+        await Http.PostAsJsonAsync($"{ServiceEndpoint}/Genre", newGenre);
+        NavigationManager.NavigateTo("/Genre", true);
+    }
+
+    private async Task SaveGenre(Genre genre)
+    {
+        await Http.PutAsJsonAsync($"{ServiceEndpoint}/Genre/{genre.Id}", genre);
+        NavigationManager.NavigateTo("/Genre", true);
+    }
+
+    private async Task DeleteGenre(Genre genre)
+    {
+        await Http.DeleteAsync($"{ServiceEndpoint}/Genre/{genre.Id}");
+        NavigationManager.NavigateTo("/Genre", true);
+    }
+}
