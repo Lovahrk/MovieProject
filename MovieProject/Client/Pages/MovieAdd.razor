@@ -107,7 +107,7 @@
 
     private async void HandleValidSubmit()
     {
-        movie.MovieGenre = movieGenre;
+        movie.MovieGenre = genres.Where(gen => gen.Id == movieGenreId).Single();
         await Http.PostAsJsonAsync($"{ServiceEndpoint}/Movie", movie);
         NavigationManager.NavigateTo($"/");
     }
